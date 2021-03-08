@@ -20,6 +20,8 @@ class Philosopher(Thread):
         # Eating
 
         self.status = "Thinking"
+
+        # priority is not implemented yet but will be used to resolve starvation problem
         self.meal_time = timer()
 
     def get_priority(self):
@@ -32,19 +34,22 @@ class Philosopher(Thread):
             self.try_eat()
 
     def try_eat(self):
+
+        # todos - print to sg.multiline element
+
         left_result = self.left_fork.acquire()
         if left_result:
             # TODO: declare that philosopher grabbed left fork
             right_result = self.right_fork.acquire()
             if right_result:
-                # TODO: declare that philosopher grabbed left fork
+                # TODO: declare that philosopher grabbed right fork
                 self.eat()
             else:
-                # declare fail of right fork
+                # TODO: declare fail of right fork
                 self.left_fork.release()
                 return
         else:
-            # declare fail of left fork
+            # TODO: declare fail of left fork
             return
 
     def eat(self):
