@@ -6,6 +6,7 @@ import PySimpleGUI as sg
 
 finish = False
 
+console = sg.Multiline(size=(45, 5))
 
 class Philosopher(Thread):
 
@@ -25,44 +26,44 @@ class Philosopher(Thread):
         self.meal_time = timer()
 
     def get_priority(self):
-        return timer() - self.meal_time
+        result = int(round(timer() - self.meal_time))
+        return result
 
     def run(self):
 
         while not finish:
-            time.sleep(r.uniform(7, 14))
+            time.sleep(r.uniform(2.5, 3.5))
             # TODO: declare that philosopher tries to pick up forks
-            print("Philosopher " + str(self.pid) + " tries to pick up fork")
+            console.print("Philosopher " + str(self.pid) + " tries to pick up fork")
             self.try_eat()
 
     def try_eat(self):
 
         # todos - print to sg.multiline element
 
-        left_result = self.left_fork.acquire()
+        left_result = self.left_fork.acquire(blocking=False)
         if left_result:
-            print("Philosopher " + str(self.pid) + " picked up left fork")
-            right_result = self.right_fork.acquire()
-            print(right_result)
+            console.print("Philosopher " + str(self.pid) + " picked up left fork")
+            right_result = self.right_fork.acquire(blocking=False)
             if right_result:
-                print("Philosopher " + str(self.pid) + " picked up right fork")
+                console.print("Philosopher " + str(self.pid) + " picked up right fork")
                 self.eat()
             else:
-                print("Philosopher " + str(self.pid) + " couldn't pick up right fork")
+                console.print("Philosopher " + str(self.pid) + " couldn't pick up right fork")
                 self.left_fork.release()
-                # return
+                return
         else:
-            print("Philosopher " + str(self.pid) + " couldn't pick up left fork")
-            # return
+            console.print("Philosopher " + str(self.pid) + " couldn't pick up left fork")
+            return
 
     def eat(self):
         self.status = "Eating"
-        print("Philosopher " + str(self.pid) + " eats")
-        time.sleep(r.uniform(7, 14))  # eating
+        console.print("Philosopher " + str(self.pid) + " eats")
+        time.sleep(r.uniform(2.5, 3.5))  # eating
         self.left_fork.release()
         self.right_fork.release()
         self.meal_time = timer()  # set priority to 0
-        print("Philosopher " + str(self.pid) + " finishes eating and puts down forks.")
+        console.print("Philosopher " + str(self.pid) + " finishes eating and puts down forks.")
         self.status = "Thinking"
 
 
@@ -74,24 +75,22 @@ def main():
 
     sg.theme('DarkTeal6')
     layout = [
-        [sg.Text("Philosopher 0 is " + philosophers[0].status, key=0, enable_events=True)],
-        [sg.Text("Philosopher 1 is " + philosophers[1].status, key=1, enable_events=True)],
-        [sg.Text("Philosopher 2 is " + philosophers[2].status, key=2, enable_events=True)],
-        [sg.Text("Philosopher 3 is " + philosophers[3].status, key=3, enable_events=True)],
-        [sg.Text("Philosopher 4 is " + philosophers[4].status, key=4, enable_events=True)],
-        [sg.Multiline()],
+        [sg.Text(key=0, enable_events=True, size=(40, 1))],
+        [sg.Text(key=1, enable_events=True, size=(40, 1))],
+        [sg.Text(key=2, enable_events=True, size=(40, 1))],
+        [sg.Text(key=3, enable_events=True, size=(40, 1))],
+        [sg.Text(key=4, enable_events=True, size=(40, 1))],
+        [console],
         [sg.Button("Finish")]
     ]
     window = sg.Window('Dining Philosophers', layout, margins=(15, 15))
     while True:  # Event Loop
 
         event, values = window.read(timeout=10)
-        # time.sleep(0.1)
-        update_label = []
         for i in range(5):
-            window[i].update(value="Philosopher " + str(i) + " is " + philosophers[i].status)
+            window[i].update(value="Philosopher " + str(i) + " is " + philosophers[i].status
+                                   + ". Last meal: " + str(philosophers[i].get_priority())+"s")
             window.refresh()
-
 
         if event in (sg.WIN_CLOSED, 'Exit'):
             break
