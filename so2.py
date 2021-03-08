@@ -12,8 +12,8 @@ class Philosopher(Thread):
     def __init__(self, pid, left_fork, right_fork):
         super().__init__()
         self.pid = pid
-        self.leftFork = left_fork
-        self.rightFork = right_fork
+        self.left_fork = left_fork
+        self.right_fork = right_fork
 
         ### statuses
         # Thinking
@@ -28,9 +28,11 @@ class Philosopher(Thread):
         return timer() - self.meal_time
 
     def run(self):
+
         while not finish:
-            time.sleep(r.randint(2500, 3500))
+            time.sleep(r.uniform(7, 14))
             # TODO: declare that philosopher tries to pick up forks
+            print("Philosopher " + str(self.pid) + " tries to pick up fork")
             self.try_eat()
 
     def try_eat(self):
@@ -39,25 +41,28 @@ class Philosopher(Thread):
 
         left_result = self.left_fork.acquire()
         if left_result:
-            # TODO: declare that philosopher grabbed left fork
+            print("Philosopher " + str(self.pid) + " picked up left fork")
             right_result = self.right_fork.acquire()
+            print(right_result)
             if right_result:
-                # TODO: declare that philosopher grabbed right fork
+                print("Philosopher " + str(self.pid) + " picked up right fork")
                 self.eat()
             else:
-                # TODO: declare fail of right fork
+                print("Philosopher " + str(self.pid) + " couldn't pick up right fork")
                 self.left_fork.release()
-                return
+                # return
         else:
-            # TODO: declare fail of left fork
-            return
+            print("Philosopher " + str(self.pid) + " couldn't pick up left fork")
+            # return
 
     def eat(self):
         self.status = "Eating"
-        time.sleep(r.randint(2500, 3500))  # eating
+        print("Philosopher " + str(self.pid) + " eats")
+        time.sleep(r.uniform(7, 14))  # eating
         self.left_fork.release()
         self.right_fork.release()
         self.meal_time = timer()  # set priority to 0
+        print("Philosopher " + str(self.pid) + " finishes eating and puts down forks.")
         self.status = "Thinking"
 
 
@@ -67,24 +72,33 @@ def main():
     for n in philosophers:
         n.start()
 
+    sg.theme('DarkTeal6')
     layout = [
-        [sg.Text("Philosopher 0 is " + philosophers[0].status)],
-        [sg.Text("Philosopher 1 is " + philosophers[1].status)],
-        [sg.Text("Philosopher 2 is " + philosophers[2].status)],
-        [sg.Text("Philosopher 3 is " + philosophers[3].status)],
-        [sg.Text("Philosopher 4 is " + philosophers[4].status)],
+        [sg.Text("Philosopher 0 is " + philosophers[0].status, key=0, enable_events=True)],
+        [sg.Text("Philosopher 1 is " + philosophers[1].status, key=1, enable_events=True)],
+        [sg.Text("Philosopher 2 is " + philosophers[2].status, key=2, enable_events=True)],
+        [sg.Text("Philosopher 3 is " + philosophers[3].status, key=3, enable_events=True)],
+        [sg.Text("Philosopher 4 is " + philosophers[4].status, key=4, enable_events=True)],
         [sg.Multiline()],
         [sg.Button("Finish")]
     ]
     window = sg.Window('Dining Philosophers', layout, margins=(15, 15))
     while True:  # Event Loop
-        event, values = window.read()
-        # print(event, values)
+
+        event, values = window.read(timeout=10)
+        # time.sleep(0.1)
+        update_label = []
+        for i in range(5):
+            window[i].update(value="Philosopher " + str(i) + " is " + philosophers[i].status)
+            window.refresh()
+
+
         if event in (sg.WIN_CLOSED, 'Exit'):
             break
 
     window.close()
-
+    global finish
+    finish = True
 
 
 if __name__ == "__main__":
