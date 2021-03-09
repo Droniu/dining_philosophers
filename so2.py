@@ -1,3 +1,17 @@
+###
+# Dining philosophers problem
+#
+# Deadlock & livelock is avoided by not allowing philosophers to pick up just one fork.
+# They can only pick forks when both are available.
+#
+# Starvation (to be implemented)
+# Starvation is avoided by using priority condition. All philosophers record how much time
+# has passed since their last meal. If one of the philosophers has not eaten for more than
+# 20 second, neither of his neighbours will pick up fork.
+#
+###
+
+
 from threading import Thread, Lock
 from timeit import default_timer as timer
 import time
@@ -6,7 +20,7 @@ import PySimpleGUI as sg
 
 finish = False
 
-console = sg.Multiline(size=(45, 5))
+console = sg.Multiline(size=(45, 12))
 
 class Philosopher(Thread):
 
@@ -33,8 +47,7 @@ class Philosopher(Thread):
 
         while not finish:
             time.sleep(r.uniform(2.5, 3.5))
-            # TODO: declare that philosopher tries to pick up forks
-            console.print("Philosopher " + str(self.pid) + " tries to pick up fork")
+            console.print("Philosopher " + str(self.pid) + " is hungry.")
             self.try_eat()
 
     def try_eat(self):
@@ -84,6 +97,7 @@ def main():
         [sg.Button("Finish")]
     ]
     window = sg.Window('Dining Philosophers', layout, margins=(15, 15))
+    global finish
     while True:  # Event Loop
 
         event, values = window.read(timeout=10)
@@ -93,11 +107,12 @@ def main():
             window.refresh()
 
         if event in (sg.WIN_CLOSED, 'Exit'):
+            finish = True
             break
 
     window.close()
-    global finish
-    finish = True
+
+
 
 
 if __name__ == "__main__":
