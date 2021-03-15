@@ -9,6 +9,10 @@
 # has passed since their last meal. If one of the philosophers has not eaten for more than
 # 20 second, neither of his neighbours will pick up fork.
 #
+# - IT'S WRONG SOLUTION! -
+# It leads to unexpected behaviour, often resulting in deadlock.
+# The pro
+#
 ###
 
 

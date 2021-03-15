@@ -5,6 +5,8 @@
 # They pick up fork on the left, but if the right one is not available, they release
 # the left one immediately.
 #
+# In order to better manage starvation, one must set blocking parameter 
+# in acquire functions to True. This will make philosophers queue for food.
 #
 ###
 
