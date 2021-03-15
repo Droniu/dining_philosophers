@@ -1,0 +1,122 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage[a4paper, left=2.5cm, right=2.5cm, top=3.5cm, bottom=3.5cm, headsep=1.2cm]{geometry}
+\usepackage{minted}
+\usepackage{icomma}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+
+\begin{document}
+\begin{titlepage}
+\centering
+
+	\vspace{1cm}
+	{\scshape\Large Systemy Operacyjne 2\par}
+	\vspace{1.5cm}
+	{\huge \textbf{Problem ucztujących filozofów}\par}
+	\vspace{2cm}
+	{\Large Michał Droń \par 248832\par}
+	\vfill
+	\vfill
+	Prowadzący\par
+	dr inż. Dominik Żelazny
+
+	\vfill
+	{\large \today\par}
+\end{titlepage}
+
+\section{Wstęp teoretyczny}
+\subsection{Definicja}
+\textbf{Problem ucztujących filozofów} jest klasycznym dla informatyki przykładem zadania synchronizacji procesów. Stworzył je E. Dijkstra w 1965 roku. \\
+Pięciu filozofów zasiada przy stole. Na stole znajduje się pięć widelców oraz posiłki. Zakładamy, że na stole znajduje się nieskończona ilość jedzenia. Filozof może mieć dwa stany - filozofowania oraz jedzenia. Aby zjeść posiłek, filozof musi podnieść \textbf{dwa} widelce - z lewej oraz z prawej strony. Nie można korzystać z widelców, które nie leżą bezpośrednio przed daną osobą. Nadane warunki prowadzą do sytuacji, w której co najwyżej dwóch filozofów może jeść posiłek w danym momencie.
+
+\subsection{Podproblemy wynikające z zadania}
+W wyniku współbieżnego działania procesów (filozofów) oraz ograniczonych zasobów (widelców) można wyszczególnić 3 podproblemy, które należy rozwiązać. \\
+
+\textbf{Zakleszczenie} (ang. \textit{deadlock}) występuje w momencie, w którym każdy z filozofów podniesie jeden widelec i będzie czekać na ten z drugiej strony. W tej sytuacji występuje cykliczny łańcuch oczekiwań, który nigdy nie zostanie przerwany.
+
+\textbf{Zapętlenie} (ang. \textit{livelock}) występuje w momencie, w którym procesy zmieniają swój stan w odpowiedzi na zmianę stanu innego procesu, lecz nie posuwają się do przodu. W przypadku ucztujących filozofów taka sytuacja może mieć miejsce np. gdy po pięciu minutach tymczasowego zakleszczenia wszyscy filozofowie w tym samym momencie odłożą widelce, odczekają pięć minut, a następnie znowu je podniosą, będą czekać pięć minut, i tak w kółko.
+
+\textbf{Zagłodzenie} (ang. \textit{starvation}) występuje w momencie, gdy jeden lub więcej procesów nie otrzymuje dostępu do zasobów przez dłuższy czas. Może zdarzyć się to niezależnie od zakleszczenia.
+
+\section{Rozwiązanie problemu}
+Problem \textbf{zakleszczenia} rozwiązany jest poprzez uniemożliwienie filozofom oczekiwania na drugi widelec. Filozof próbując przejść do stanu jedzenia próbuje podnieść najpierw lewy widelec. Jeśli ta operacja się powiedzie, próbuje podnieść prawy. Jeżeli prawy widelec jest zajęty, filozof natychmiast odkłada lewy widelec z powrotem i rezygnuje z jedzenia. Ilustruje to ta część kodu źródłowego programu:
+\begin{minted}{python}
+def try_eat(self):
+
+    left_result = self.left_fork.acquire(blocking=False)
+    if left_result:
+        console.print("Philosopher " + str(self.pid) + " picked up left fork")
+        right_result = self.right_fork.acquire(blocking=False)
+        if right_result:
+            console.print("Philosopher " + str(self.pid) + " picked up right fork")
+            self.eat()
+        else:
+            console.print("Philosopher " + str(self.pid) + " couldn't pick up right fork")
+            self.left_fork.release()
+            return
+    else:
+        console.print("Philosopher " + str(self.pid) + " couldn't pick up left fork")
+        return
+\end{minted}
+
+\newpage
+\textbf{Livelock} nie występuje ze względu na losowość zmian stanów filozofów. 
+
+\begin{minted}{python}
+def run(self):
+
+    while not finish:
+        time.sleep(r.uniform(2.5, 3.5))
+        console.print("Philosopher " + str(self.pid) + " is hungry.")
+        self.try_eat()
+\end{minted}
+
+W wyniku wprowadzonej losowości szansa na \textbf{zagłodzenie} jest stosunkowo mała i zjawisko to występuje rzadko. Przy wprowadzonych czasach (zmiana stanu losowo między $2,5$ a $3,5$ sekundy) czas oczekiwania na posiłek dowolnego z filozofów bardzo rzadko przekracza 20 sekund.
+\\
+W drugiej wersji programu podjąłem próbę zapobiegnięcia zagłodzenia poprzez wprowadzenie "priorytetu głodowego" - jeżeli jeden z sąsiadów nie zjadł posiłku od dawna, zostaje mu nadany priorytet i żaden z sąsiadów nie może zjeść, póki głodzony filozof nie zasiądzie do posiłku, co ilustruje kod:
+\begin{minted}{python}
+if self.left_neighbour.starving:
+    console.print("Philosopher " + str(self.pid) + " waits for left starving philospher to eat.")
+    return
+elif self.right_neighbour.starving:
+    console.print("Philosopher " + str(self.pid) + " waits for right starving philospher to eat.")
+    return
+\end{minted}
+oraz:
+\begin{minted}{python}
+def get_priority(self):
+    result = int(round(timer() - self.meal_time))
+    if (result>STARVING_TIME and self.status == "Thinking"):
+        if not (self.left_neighbour.starving or self.right_neighbour.starving):
+            self.starving = True
+    return result
+\end{minted}
+Niestety, prowadzi to do nieoczekiwanych rezultatów - czasami powstaje zakleszczenie. Ostatecznie zrezygnowałem z tego pomysłu.
+
+Jednakże, metoda \mintinline{python}{acquire} klasy \mintinline{python}{Lock} posiada parametr \mintinline{python}{blocking}. W podstawowej wersji programu ustawiłem go na \mintinline{python}{False}, aby pokazać filozofów próbujących podnosić widelce w użyciu. Domyślnie ten parametr ustawiony jest na \mintinline{python}{True}, co tworzy kolejkę. W tej sytuacji czasy ostatniego posiłku stają się jeszcze niższe i zagłodzenie w praktyce nie występuje.
+\newpage
+\section{Implementacja}
+
+Aplikacja została stworzona z użyciem języka \textbf{Python}. Do stworzenia GUI został użyty pakiet \mintinline{python}{PySimpleGUI}.
+
+Obsługą wątków zajmuje się biblioteka \mintinline{python}{threading}. Klasa \mintinline{python}{Lock} jest odpowiednikiem mutexów w języku C++.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{dining_philosophers.png}
+    \caption{GUI Aplikacji}
+    \label{fig:my_label}
+\end{figure}
+
+Przycisk "Finish" służy do zakończenia wątków. Można wtedy w spokojny sposób przeanalizować konsolę.
+
+\section{Wnioski}
+Ucztujący filozofowie to bardzo ciekawy problem informatyczny, który pokazuje w jaki sposób procesy muszą walczyć o ograniczone zasoby. Wbrew pozorom wyeliminowanie wszystkich trzech podproblemów nie jest bardzo prostym zadaniem.
+
+Implementacja tego problemu w języku Python jest nieco nietypowa, ze względu na fakt, że nie jest to język używany często w zastosowaniach niskopoziomowych. Mimo wszystko możliwe jest przedstawienie w nim tego zadania.
+
+Pełny kod programu dos†ępny jest na stronie \url{https://github.com/Droniu/dining_philosophers}
+
+\end{document}
