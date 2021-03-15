@@ -2,12 +2,9 @@
 # Dining philosophers problem
 #
 # Deadlock & livelock is avoided by not allowing philosophers to pick up just one fork.
-# They can only pick forks when both are available.
+# They pick up fork on the left, but if the right one is not available, they release
+# the left one immediately.
 #
-# Starvation (to be implemented)
-# Starvation is avoided by using priority condition. All philosophers record how much time
-# has passed since their last meal. If one of the philosophers has not eaten for more than
-# 20 second, neither of his neighbours will pick up fork.
 #
 ###
 
@@ -19,7 +16,6 @@ import random as r
 import PySimpleGUI as sg
 
 finish = False
-
 console = sg.Multiline(size=(45, 12))
 
 class Philosopher(Thread):
@@ -36,7 +32,6 @@ class Philosopher(Thread):
 
         self.status = "Thinking"
 
-        # priority is not implemented yet but will be used to resolve starvation problem
         self.meal_time = timer()
 
     def get_priority(self):
@@ -44,17 +39,17 @@ class Philosopher(Thread):
         return result
 
     def run(self):
-
+        time.sleep(r.uniform(2.5, 3.5))
         while not finish:
-            time.sleep(r.uniform(2.5, 3.5))
             console.print("Philosopher " + str(self.pid) + " is hungry.")
             self.try_eat()
+            time.sleep(r.uniform(2.5, 3.5))
 
     def try_eat(self):
 
         # todos - print to sg.multiline element
 
-        left_result = self.left_fork.acquire(blocking=False)
+        left_result = self.left_fork.acquire(blocking=False) # blocking=False avoids queue
         if left_result:
             console.print("Philosopher " + str(self.pid) + " picked up left fork")
             right_result = self.right_fork.acquire(blocking=False)
@@ -63,7 +58,7 @@ class Philosopher(Thread):
                 self.eat()
             else:
                 console.print("Philosopher " + str(self.pid) + " couldn't pick up right fork")
-                self.left_fork.release()
+                self.left_fork.release() # releasing left fork when cannot take the right one
                 return
         else:
             console.print("Philosopher " + str(self.pid) + " couldn't pick up left fork")
@@ -75,7 +70,7 @@ class Philosopher(Thread):
         time.sleep(r.uniform(2.5, 3.5))  # eating
         self.left_fork.release()
         self.right_fork.release()
-        self.meal_time = timer()  # set priority to 0
+        self.meal_time = timer()  # set last meal timer to 0
         console.print("Philosopher " + str(self.pid) + " finishes eating and puts down forks.")
         self.status = "Thinking"
 
@@ -100,7 +95,7 @@ def main():
     global finish
     while True:  # Event Loop
 
-        event, values = window.read(timeout=10)
+        event, values = window.read(timeout=50)
         for i in range(5):
             window[i].update(value="Philosopher " + str(i) + " is " + philosophers[i].status
                                    + ". Last meal: " + str(philosophers[i].get_priority())+"s")
@@ -109,6 +104,9 @@ def main():
         if event in (sg.WIN_CLOSED, 'Exit'):
             finish = True
             break
+        if event == 'Finish':
+            console.print("Dining is about to end.")
+            finish = True
 
     window.close()
 
