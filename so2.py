@@ -11,7 +11,7 @@
 ###
 
 
-from threading import Thread, Lock
+from threading import Thread, Lock, RLock
 from timeit import default_timer as timer
 import time
 import random as r
@@ -75,7 +75,7 @@ class Philosopher(Thread):
         self.meal_time = timer()  # set last meal timer to 0
         console.print("Philosopher " + str(self.pid) + " finishes eating and puts down forks.")
         self.status = "Thinking"
-
+        
 
 def main():
     forks = [Lock() for n in range(5)]
@@ -90,6 +90,11 @@ def main():
         [sg.Text(key=2, enable_events=True, size=(40, 1))],
         [sg.Text(key=3, enable_events=True, size=(40, 1))],
         [sg.Text(key=4, enable_events=True, size=(40, 1))],
+        [sg.Text(key=5, enable_events=True, size=(40, 1))],
+        [sg.Text(key=6, enable_events=True, size=(40, 1))],
+        [sg.Text(key=7, enable_events=True, size=(40, 1))],
+        [sg.Text(key=8, enable_events=True, size=(40, 1))],
+        [sg.Text(key=9, enable_events=True, size=(40, 1))],
         [console],
         [sg.Button("Finish")]
     ]
@@ -98,11 +103,19 @@ def main():
     while True:  # Event Loop
 
         event, values = window.read(timeout=50)
+        
         for i in range(5):
             window[i].update(value="Philosopher " + str(i) + " is " + philosophers[i].status
                                    + ". Last meal: " + str(philosophers[i].get_priority())+"s")
+            fork_status = ""
+            if forks[i].locked():
+                fork_status = "Taken"
+            else:
+                fork_status = "Free"
+            window[i+5].update(value="Fork " + str(i) + " is " + fork_status)
             window.refresh()
 
+        
         if event in (sg.WIN_CLOSED, 'Exit'):
             finish = True
             break
